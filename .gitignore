@@ -1,0 +1,3 @@
+# Local files that do not need uploading to repository.
+local/
+bin/
