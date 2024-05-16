@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.2.0] - 2022-08-24
+
+### Added
+
+- Added logic to export section's room number and teacher's full name (last, first) if populated.
+- Added placeholder for preferred name in needed in furure revisions. Query currently exports null for field.
+
 ## [1.1.1] - 2021-09-30
 
 ### Fixed

@@ -20,10 +20,13 @@
 			<column column="U_STUDENTS_ALCUSTOM.Student_Email">Student_email</column>
 			<column column="STUDENTS.HOME_PHONE">Home_phone</column>
 			<column column="STUDENTS.HOME_ROOM">Homeroom</column>
+			<column column="STUDENTS.HOME_ROOM">Room_number</column>
 			<column column="STUDENTS.DOB">DOB</column>
 			<column column="STUDENTS.GRADE_LEVEL">Grade</column>
+      <column column="STUDENTS.first_name">Preferred_name</column>
 			<column column="STUDENTS.Ethnicity">Race</column>
 			<column column="STUDENTS.GENDER">Gender</column>
+      <column column="STUDENTS.HOME_ROOM">Teacher_name</column>
     </columns>
 		<sql>
 			<![CDATA[
@@ -100,13 +103,18 @@ SELECT
   e.Student_Email as "Student_email",
   s.home_phone as "Home_phone",
   CONCAT(substr(CONCAT('000',cc.Section_Number),-4), CONCAT(' ', u.last_name)) as "Homeroom",
+  sec.room as "Room_number",
   to_char(s.dob,'MM/DD/YYYY') as "DOB",
   case when s.grade_level < 0 then 'PK'
 		  when s.grade_level = 0 then 'KG'
 		  when s.grade_level > 12 then 'GR'
 		  else to_char(s.grade_level) end as "Grade",
+  null as "Preferred_name",
   s.ethnicity as "Race",
-  s.gender as "Gender"
+  s.gender as "Gender",
+  -- CONCAT(CONCAT(u.last_name, ', '), u.first_name) as "Teacher_name"
+  CASE when u.last_name = '' OR u.last_name is null then null
+      else CONCAT(CONCAT(u.last_name, ', '), u.first_name) END as "Teacher_name"
   FROM active_students stu
 join (  -- detect new year rollover "today"
   select 1 as value
@@ -139,9 +147,10 @@ left join (select studentid, email
 join schools sch on s.schoolID = sch.school_number
 LEFT JOIN U_DEF_EXT_STUDENTS s2 ON s.dcid = s2.studentsdcid
 LEFT JOIN U_STUDENTS_ALCUSTOM e ON s.dcid = e.studentsdcid
-left join cc on s.id = cc.studentid and cc.course_number = '22991X00' and cc.termid = 3100
-left join schoolstaff ss on ss.id = cc.teacherid
+left join cc on s.id = cc.studentid and cc.course_number = '22991X00' and cc.termid = 3300
+left join schoolstaff ss on ss.id = cc.teacherid 
 left join users u on u.dcid = ss.USERS_DCID
+left join sections sec on sec.id = cc.sectionid
 where s.state_studentnumber is not null AND s.enroll_status = 0
 order by s.student_number
 			]]>
