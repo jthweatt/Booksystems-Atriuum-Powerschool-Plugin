@@ -160,26 +160,21 @@
     <description>Teacher Information</description>
     <columns>
       <column column="users.first_name">teacher_schoolid</column>
+      <column column="users.first_name">teacher_schoolname</column>
       <column column="users.first_name">teacher_id</column>
       <column column="users.first_name">teacher_number</column>
-      <column column="users.first_name">state_teacherid</column>
       <column column="users.first_name">teacher_email</column>
       <column column="users.first_name">teacher_firstname</column>
       <column column="users.first_name">teacher_middlename</column>
       <column column="users.first_name">teacher_lastname</column>
-      <column column="users.first_name">teacher_title</column>
-      <column column="users.first_name">username</column>
-      <column column="users.first_name">password</column>
-      <column column="users.first_name">teacher_ext</column>
     </columns>
     <sql>
       <![CDATA[
 					select 
             substr(CONCAT('00',ss.schoolid),-4) as teacher_schoolid,
-            sch.name as "School_name",
+            sch.name as teacher_schoolname,
             ss.id as teacher_id,
             u.teachernumber as teacher_number,
-            /*u.sif_stateprid as state_teacherid,*/
             u.email_addr as teacher_email,
             u.first_name as teacher_firstname,
             u.middle_name as teacher_middlename,
