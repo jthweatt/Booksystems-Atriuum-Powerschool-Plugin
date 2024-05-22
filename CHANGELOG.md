@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.3.0] - 2024-05-22
+
+### Added
+
+- Added teacher query to export School Teachers and Library Media Specialists.
+
 ## [1.2.0] - 2022-08-24
 
 ### Added
