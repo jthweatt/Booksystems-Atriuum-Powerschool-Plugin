@@ -1,159 +1,198 @@
 <?xml version="1.0"?>
 <queries>
-<query name="us.al.k12.dothan.atriuum.students" coreTable="STUDENTS" flattened="true">
-		<description>Pull student data for Atriuum</description>
-		<args>
-		</args>
-		<columns>
-			<column column="STUDENTS.SCHOOLID">School_id</column>
+  <query name="us.al.k12.dothan.atriuum.students" coreTable="STUDENTS" flattened="true">
+    <description>Pull student data for Atriuum</description>
+    <args>
+    </args>
+    <columns>
+      <column column="STUDENTS.SCHOOLID">School_id</column>
       <column column="SCHOOLS.NAME">School_name</column>
-			<column column="STUDENTS.LAST_NAME">Last_name</column>
-			<column column="STUDENTS.FIRST_NAME">First_name</column>
-			<column column="STUDENTS.MIDDLE_NAME">Middle_name</column>
+      <column column="STUDENTS.LAST_NAME">Last_name</column>
+      <column column="STUDENTS.FIRST_NAME">First_name</column>
+      <column column="STUDENTS.MIDDLE_NAME">Middle_name</column>
       <column column="STUDENTS.State_StudentNumber">State_id</column>
-			<column column="STUDENTS.STUDENT_NUMBER">Student_number</column>
+      <column column="STUDENTS.STUDENT_NUMBER">Student_number</column>
       <column column="U_DEF_EXT_STUDENTS.lunch_number">Alternate_number</column>
       <column column="STUDENTS.STREET">Street</column>
-			<column column="STUDENTS.CITY">City</column>
-			<column column="STUDENTS.STATE">State</column>
-			<column column="STUDENTS.ZIP">Student_zip</column>
-			<column column="U_STUDENTS_ALCUSTOM.Student_Email">Student_email</column>
-			<column column="STUDENTS.HOME_PHONE">Home_phone</column>
-			<column column="STUDENTS.HOME_ROOM">Homeroom</column>
-			<column column="STUDENTS.HOME_ROOM">Room_number</column>
-			<column column="STUDENTS.DOB">DOB</column>
-			<column column="STUDENTS.GRADE_LEVEL">Grade</column>
+      <column column="STUDENTS.CITY">City</column>
+      <column column="STUDENTS.STATE">State</column>
+      <column column="STUDENTS.ZIP">Student_zip</column>
+      <column column="U_STUDENTS_ALCUSTOM.Student_Email">Student_email</column>
+      <column column="STUDENTS.HOME_PHONE">Home_phone</column>
+      <column column="STUDENTS.HOME_ROOM">Homeroom</column>
+      <column column="STUDENTS.HOME_ROOM">Room_number</column>
+      <column column="STUDENTS.DOB">DOB</column>
+      <column column="STUDENTS.GRADE_LEVEL">Grade</column>
       <column column="STUDENTS.first_name">Preferred_name</column>
-			<column column="STUDENTS.Ethnicity">Race</column>
-			<column column="STUDENTS.GENDER">Gender</column>
+      <column column="STUDENTS.Ethnicity">Race</column>
+      <column column="STUDENTS.GENDER">Gender</column>
       <column column="STUDENTS.HOME_ROOM">Teacher_name</column>
     </columns>
-		<sql>
-			<![CDATA[
-			WITH 
-  current_year as (
-  /*
-  -- Define the year with the largest student count
-  -- as the current school year
-  */
-  select yearid 
-  from (
-    select 
-          t.yearid as yearid,
-          count(s.dcid) as cnt
-        from students s
-    join terms t
-      on    t.schoolid = s.schoolid and s.schoolid not in (888888,999999)
-			and t.yearid >= 30
-            and t.isyearrec = 1
-            and s.entrydate between t.firstday and t.lastday
-    group by t.yearid
-    order by count(s.dcid) desc
-  )
-  where rownum = 1
-),
-  active_students as (
-  /*
-  -- Pull the most current enrollment from the PowerSchool STUDENTS table
-  -- for students enrolled in the current school year
-  */
-  SELECT STU.STUDENT_NUMBER, STU.ID
-  FROM STUDENTS STU
-  where stu.student_number is not null
-  and stu.entrydate < stu.exitdate
-  and exists (select 1
-              from terms
-              join current_year y on y.yearid = terms.yearid and terms.isyearrec = 1
-              where stu.entrydate <= terms.lastday
-              and stu.exitdate > terms.firstday
-              and stu.schoolid = terms.schoolid
-             )
-  union
-  /*
-  -- Pull all prior enrollment records from the PowerSchool REENROLLMENTS table
-  -- for students who had multiple enrollments in the current school year
-  */
-  SELECT STU.STUDENT_NUMBER, ENR.STUDENTID
-  FROM REENROLLMENTS ENR
-  inner join students stu on enr.studentid = stu.id
-  and stu.student_number is not null
-  where enr.entrydate < enr.exitdate
-  and exists (select 1
-              from terms
-              join current_year y on y.yearid = terms.yearid and terms.isyearrec = 1
-              where enr.entrydate <= terms.lastday
-              and enr.exitdate > terms.firstday
-              and enr.schoolid = terms.schoolid
-              )
-  )
-SELECT
-  substr(CONCAT('00',s.schoolid),-4) as "School_id",
-  sch.name as "School_name",
-  ltrim(rtrim(replace(s.last_name,chr(34),chr(39)))) as "Last_name",
-  ltrim(rtrim(replace(s.first_name,chr(34),chr(39)))) as "First_name",
-  ltrim(rtrim(replace(s.middle_name,chr(34),chr(39)))) as "Middle_name",
-  s.State_StudentNumber as "State_id",
-  s.student_number as "Student_number",
-  s2.lunch_number as "Alternate_number",
-  s.street as "Street",
-  s.city as "City",
-  s.state as "State",
-  s.zip as "Zip",
-  -- pcon.email as "Student_email",
-  e.Student_Email as "Student_email",
-  s.home_phone as "Home_phone",
-  CONCAT(substr(CONCAT('000',cc.Section_Number),-4), CONCAT(' ', u.last_name)) as "Homeroom",
-  sec.room as "Room_number",
-  to_char(s.dob,'MM/DD/YYYY') as "DOB",
-  case when s.grade_level < 0 then 'PK'
-		  when s.grade_level = 0 then 'KG'
-		  when s.grade_level > 12 then 'GR'
-		  else to_char(s.grade_level) end as "Grade",
-  null as "Preferred_name",
-  s.ethnicity as "Race",
-  s.gender as "Gender",
-  -- CONCAT(CONCAT(u.last_name, ', '), u.first_name) as "Teacher_name"
-  CASE when u.last_name = '' OR u.last_name is null then null
-      else CONCAT(CONCAT(u.last_name, ', '), u.first_name) END as "Teacher_name"
-  FROM active_students stu
-join (  -- detect new year rollover "today"
-  select 1 as value
-  from prefs
-  where name = 'lastpromotiondate'
-  and to_char(to_date(value, 'mm/dd/yyyy'), 'J') <> to_char(sysdate, 'J')
-  union
-  select 2 as value 
-  from (
-    select name
-        from prefs
-    where not exists (select 1 from prefs where name = 'lastpromotiondate')
-  )
-  where rownum = 1
-) on 1 = 1
-inner join students s on stu.id = s.id and stu.student_number is not null
-left join sync_studentmap sync on s.dcid=sync.studentsdcid
-left join psm_student pstu on sync.studentid=pstu.id
-left join (select studentid, email
-          from psm_studentcontact sc1
-          where sc1.studentcontacttypeid = (select id from psm_studentcontacttype where name='Self' )
-          and not exists (
-              select 1
-              from psm_studentcontact sc2
-              where sc2.studentcontacttypeid = (select id from psm_studentcontacttype where name='Self')
-               and sc1.studentid = sc2.studentid
-               and sc1.id > sc2.id  -- choose the first 'Self' contact if more than one
-            )
-          ) pcon on pstu.id=pcon.studentid
-join schools sch on s.schoolID = sch.school_number
-LEFT JOIN U_DEF_EXT_STUDENTS s2 ON s.dcid = s2.studentsdcid
-LEFT JOIN U_STUDENTS_ALCUSTOM e ON s.dcid = e.studentsdcid
-left join cc on s.id = cc.studentid and cc.course_number = '22991X00' and cc.termid = 3300
-left join schoolstaff ss on ss.id = cc.teacherid 
-left join users u on u.dcid = ss.USERS_DCID
-left join sections sec on sec.id = cc.sectionid
-where s.state_studentnumber is not null AND s.enroll_status = 0
-order by s.student_number
+    <sql>
+      <![CDATA[
+        WITH 
+          current_year as (
+          /*
+          -- Define the year with the largest student count
+          -- as the current school year
+          */
+          select yearid 
+          from (
+            select 
+                  t.yearid as yearid,
+                  count(s.dcid) as cnt
+                from students s
+            join terms t
+              on    t.schoolid = s.schoolid and s.schoolid not in (888888,999999)
+              and t.yearid >= 30
+                    and t.isyearrec = 1
+                    and s.entrydate between t.firstday and t.lastday
+            group by t.yearid
+            order by count(s.dcid) desc
+          )
+          where rownum = 1
+          ),
+          active_students as (
+          /*
+          -- Pull the most current enrollment from the PowerSchool STUDENTS table
+          -- for students enrolled in the current school year
+          */
+          SELECT STU.STUDENT_NUMBER, STU.ID
+          FROM STUDENTS STU
+          where stu.student_number is not null
+          and stu.entrydate < stu.exitdate
+          and exists (select 1
+                      from terms
+                      join current_year y on y.yearid = terms.yearid and terms.isyearrec = 1
+                      where stu.entrydate <= terms.lastday
+                      and stu.exitdate > terms.firstday
+                      and stu.schoolid = terms.schoolid
+                    )
+          union
+          /*
+          -- Pull all prior enrollment records from the PowerSchool REENROLLMENTS table
+          -- for students who had multiple enrollments in the current school year
+          */
+          SELECT STU.STUDENT_NUMBER, ENR.STUDENTID
+          FROM REENROLLMENTS ENR
+          inner join students stu on enr.studentid = stu.id
+          and stu.student_number is not null
+          where enr.entrydate < enr.exitdate
+          and exists (select 1
+                      from terms
+                      join current_year y on y.yearid = terms.yearid and terms.isyearrec = 1
+                      where enr.entrydate <= terms.lastday
+                      and enr.exitdate > terms.firstday
+                      and enr.schoolid = terms.schoolid
+                      )
+          )
+        SELECT
+          substr(CONCAT('00',s.schoolid),-4) as "School_id",
+          sch.name as "School_name",
+          ltrim(rtrim(replace(s.last_name,chr(34),chr(39)))) as "Last_name",
+          ltrim(rtrim(replace(s.first_name,chr(34),chr(39)))) as "First_name",
+          ltrim(rtrim(replace(s.middle_name,chr(34),chr(39)))) as "Middle_name",
+          s.State_StudentNumber as "State_id",
+          s.student_number as "Student_number",
+          s2.lunch_number as "Alternate_number",
+          s.street as "Street",
+          s.city as "City",
+          s.state as "State",
+          s.zip as "Zip",
+          -- pcon.email as "Student_email",
+          e.Student_Email as "Student_email",
+          s.home_phone as "Home_phone",
+          CONCAT(substr(CONCAT('000',cc.Section_Number),-4), CONCAT(' ', u.last_name)) as "Homeroom",
+          sec.room as "Room_number",
+          to_char(s.dob,'MM/DD/YYYY') as "DOB",
+          case when s.grade_level < 0 then 'PK'
+              when s.grade_level = 0 then 'KG'
+              when s.grade_level > 12 then 'GR'
+              else to_char(s.grade_level) end as "Grade",
+          null as "Preferred_name",
+          s.ethnicity as "Race",
+          s.gender as "Gender",
+          -- CONCAT(CONCAT(u.last_name, ', '), u.first_name) as "Teacher_name"
+          CASE when u.last_name = '' OR u.last_name is null then null
+              else CONCAT(CONCAT(u.last_name, ', '), u.first_name) END as "Teacher_name"
+          FROM active_students stu
+        join (  -- detect new year rollover "today"
+          select 1 as value
+          from prefs
+          where name = 'lastpromotiondate'
+          and to_char(to_date(value, 'mm/dd/yyyy'), 'J') <> to_char(sysdate, 'J')
+          union
+          select 2 as value 
+          from (
+            select name
+                from prefs
+            where not exists (select 1 from prefs where name = 'lastpromotiondate')
+          )
+          where rownum = 1
+        ) on 1 = 1
+        inner join students s on stu.id = s.id and stu.student_number is not null
+        left join sync_studentmap sync on s.dcid=sync.studentsdcid
+        left join psm_student pstu on sync.studentid=pstu.id
+        left join (select studentid, email
+                  from psm_studentcontact sc1
+                  where sc1.studentcontacttypeid = (select id from psm_studentcontacttype where name='Self' )
+                  and not exists (
+                      select 1
+                      from psm_studentcontact sc2
+                      where sc2.studentcontacttypeid = (select id from psm_studentcontacttype where name='Self')
+                      and sc1.studentid = sc2.studentid
+                      and sc1.id > sc2.id  -- choose the first 'Self' contact if more than one
+                    )
+                  ) pcon on pstu.id=pcon.studentid
+        join schools sch on s.schoolID = sch.school_number
+        LEFT JOIN U_DEF_EXT_STUDENTS s2 ON s.dcid = s2.studentsdcid
+        LEFT JOIN U_STUDENTS_ALCUSTOM e ON s.dcid = e.studentsdcid
+        left join cc on s.id = cc.studentid and cc.course_number = '22991X00' and cc.termid = 3300
+        left join schoolstaff ss on ss.id = cc.teacherid 
+        left join users u on u.dcid = ss.USERS_DCID
+        left join sections sec on sec.id = cc.sectionid
+        where s.state_studentnumber is not null AND s.enroll_status = 0
+        order by s.student_number
 			]]>
-		</sql>
-	</query>
+    </sql>
+  </query>
+  <query name="us.al.k12.dothan.atriuum.teachers" coreTable="" flattened="true">
+    <description>Teacher Information</description>
+    <columns>
+      <column column="users.first_name">teacher_schoolid</column>
+      <column column="users.first_name">teacher_id</column>
+      <column column="users.first_name">teacher_number</column>
+      <column column="users.first_name">state_teacherid</column>
+      <column column="users.first_name">teacher_email</column>
+      <column column="users.first_name">teacher_firstname</column>
+      <column column="users.first_name">teacher_middlename</column>
+      <column column="users.first_name">teacher_lastname</column>
+      <column column="users.first_name">teacher_title</column>
+      <column column="users.first_name">username</column>
+      <column column="users.first_name">password</column>
+      <column column="users.first_name">teacher_ext</column>
+    </columns>
+    <sql>
+      <![CDATA[
+					select 
+            substr(CONCAT('00',ss.schoolid),-4) as teacher_schoolid,
+            sch.name as "School_name",
+            ss.id as teacher_id,
+            u.teachernumber as teacher_number,
+            /*u.sif_stateprid as state_teacherid,*/
+            u.email_addr as teacher_email,
+            u.first_name as teacher_firstname,
+            u.middle_name as teacher_middlename,
+            u.last_name as teacher_lastname
+          from users u
+          join schoolstaff ss 
+            on u.dcid = ss.USERS_DCID
+              and SS.STATUS = 1
+          join schools sch on ss.schoolID = sch.school_number
+          join S_AL_USR_STAFFPOSITION_C p on p.usersdcid = u.dcid
+          where ss.schoolid = u.HomeSchoolID
+            and (ss.staffstatus = 1 or (ss.staffstatus =  2 and p.staff_position = 1038758))
+			]]>
+    </sql>
+  </query>
 </queries>
